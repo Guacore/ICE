@@ -1,0 +1,18 @@
+{
+    "plot/synonym_label.pdf": [
+        [
+            "RAND",
+            "KBR",
+            "AVGEMB",
+            "BPT",
+            "ICE (exp-3)"
+        ],
+        [
+            "c*-",
+            "gd-",
+            "bo-",
+            "ys-",
+            "r^-"
+        ]
+    ]
+}

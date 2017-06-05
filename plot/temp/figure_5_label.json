@@ -1,0 +1,16 @@
+{
+    "plot/keyword_legend.pdf": [
+        [
+            "RAND",
+            "AVGEMB",
+            "BPT",
+            "ICE (exp-3)"
+        ],
+        [
+            "c*-",
+            "bo-",
+            "ys-",
+            "r^-"
+        ]
+    ]
+}
