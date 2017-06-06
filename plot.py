@@ -38,5 +38,3 @@ for stat_path in stat_path_list:
     
     for figure_path in stat_dict:
         plot_figure(figure_path, *stat_dict[figure_path])
-
-plot_venn_diagram("venn.pdf", [1,2,3], [2,2,1,0,0,0,0], 0.0001)
