@@ -16,19 +16,21 @@
 # Proj: Item Concept Embedding (ICE)
 # File: utility.py
 # Seri: 1/6
-# Date: 06/02/2017
+# Date: 06/06/2017
 # Cont:
 #	Func:
 #       1) print_dict_entries               2) save_json_obj
-#       3) load_json_obj                    4) plot_pdf_legend
-#       4) plot_pdf_figure
+#       3) load_json_obj                    4) use_type_1_font
+#       4) plot_pdf_legend                  5) plot_pdf_figure
+#       6) plot_venn_diagram
 
 import json
-
 import matplotlib
 matplotlib.use('PDF')
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+import matplotlib_venn
+
 
 
 def print_dict_entries(dictionary, num=3):
@@ -65,22 +67,28 @@ def load_json_obj(path):
         return json.load(f)
 
 
-def plot_pdf_legend(path, label_list, style_list, t1f=True):
-    """ Plot .pdf legend by itself without figure for easier processing.
+def use_type_1_font():
+    """ Set Matplotlib to generate .pdf in Type 1 font instead of the default
+        Type 3 font.
+    Note:
+        1) Manually set text in functions using Matplotlib will overwrite the
+            default LaTeX font. Enclose text with '$' to ensure uniform font.
+        2) Used before any Matplotlib functions.
+    """
+    matplotlib.rcParams['ps.useafm'] = True
+    matplotlib.rcParams['pdf.use14corefonts'] = True
+    matplotlib.rcParams['text.usetex'] = True # use LaTeX for all text handling
+   
+
+def plot_legend(path, label_list, style_list):
+    """ Plot legend by itself without figure for easier processing.
     Param:
-        param1 [string] path to save the pdf legend.
+        param1 [string] path to save the legend.
         param2 [list] of string line labels.
         param3 [list] of string line style specifications.
-        param4 [bool] whether to use Type 1 or Type 3 font. Default=True.
     Note:
         1) Plot with Type 1 font to accomodate all platforms by default.
     """
-    # Switch from default Type 3 to Type 1 font.
-    if t1f:
-        matplotlib.rcParams['ps.useafm'] = True
-        matplotlib.rcParams['pdf.use14corefonts'] = True
-        matplotlib.rcParams['text.usetex'] = True
-
     fig = plt.figure(path)
     plt.axis('off') # remove ticks
 
@@ -92,30 +100,23 @@ def plot_pdf_legend(path, label_list, style_list, t1f=True):
     ax.set_position([box.x0, box.y0, box.width*0.5, box.height*0.5])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
-    pp = PdfPages(path)
-    pp.savefig(fig)
-    pp.close()
+    plt.savefig(path)
+    plt.clf()
 
-def plot_pdf_figure(path, title, xl, yl, xt_list, yl_list, style_list, t1f=True):
-    """ Plot .pdf figure by itself without legend for easier processing.
+
+def plot_figure(path, title, xl, yl, xt_list, yl_list, style_list):
+    """ Plot figure by itself without legend for easier processing.
     Param:
-        param1 [string] path to save the pdf figure.
+        param1 [string] path to save the figure.
         param2 [string] figure title.
         param3 [string] x-axis label.
         param4 [string] y-axis label.
         param5 [list] of string x-axis ticks.
         param6 [list] of lists of y-coordinates for each line.
         param7 [list] of string line style specifications.
-        param8 [bool] whether to use Type 1 or Type 3 font. Default=True.
     Note:
         1) Plot with Type 1 font to accommodate all platforms by default.
     """
-    # Switch from default Type 3 to Type 1 font.
-    if t1f:
-        matplotlib.rcParams['ps.useafm'] = True
-        matplotlib.rcParams['pdf.use14corefonts'] = True
-        matplotlib.rcParams['text.usetex'] = True
-
     fig = plt.figure(path)
     
     ax = fig.add_subplot(111)
@@ -128,6 +129,51 @@ def plot_pdf_figure(path, title, xl, yl, xt_list, yl_list, style_list, t1f=True)
     for y_list, style in zip(yl_list, style_list):
         ax.plot(x_list, y_list, style)
     
-    pp = PdfPages(path)
-    pp.savefig(fig)
-    pp.close()
+    plt.savefig(path)
+    plt.clf()
+
+
+def plot_venn_diagram(path, set_list, size_list, empty_area=0.0):
+    """ Plot two or three circle Venn diagram. Suport manually setting display
+        size for empty sets.
+    Param:
+        param1 [list] path to save the figure.
+        param2 [list] of string set labels correspond to each circle.
+        param3 [list] of sizes ordered by Venn diagram subregion encoding.
+        param4 [float] area for an empty circle. Default=0.0.
+    Note:
+        1) param3 is ordered by binary countup from the left starting from 1 to
+            encode each Venn diagram subregion.
+            Ex: For venn2, '10'='Ab'="A and NOT B", '01'='aB'="Not A and B", and
+            '11'='AB'="A and B".
+        2) param4 should be in [0,1), as a non-empty set has size at least 1.
+        3) Venn diagram is restricted to 2 or 3 sets.
+    """
+    # Step 1: Retrieve Venn function wrt the number of sets.
+    set_num = len(set_list)
+    venn_func = getattr(matplotlib_venn, 'venn'+str(set_num))
+    
+    # Step 2: Set minimum area for empty sets for cosmetic reason.
+    dec_id_list = []
+    if empty_area != 0:
+        for set_id in range(set_num): # set id denotes digit position
+            is_empty = True
+            carry = pow(2,set_id) # every digit-flip by carry is a half cycle
+            for half_cyc_id in range(int(pow(2, set_num-1)/carry)):
+                for offset in range(carry):
+                    if size_list[carry+2*half_cyc_id*carry+offset-1] != 0:
+                        is_empty = False
+            if is_empty: # all subregions of current set's circle are empty
+                size_list[carry-1] = empty_area # min size for display
+                dec_id_list.append(carry) # carry = idx+1
+    
+    # Step 3: Plot Venn diagram:
+    fig = venn_func(subsets=size_list, set_labels=tuple(set_list))
+    
+    # Step 4: Label empty sets as '0'.
+    for dec_id in dec_id_list:
+        bin_id = ("{0:0"+str(set_num)+"b}").format(dec_id)[::-1] # Note 1)
+        fig.get_label_by_id(bin_id).set_text('0')
+
+    plt.savefig(path)
+    plt.clf()
